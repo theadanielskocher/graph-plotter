@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plot Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Vẽ đồ thị online</h1>
+    <input type="text" id="equation" placeholder="Enter equation, e.g., 1/x">
+    <button onclick="plotGraph()">Plot Graph</button>
+    <canvas id="graphCanvas" width="300" height="300"></canvas>
+
+    <script>
+        let myChart; // Biến toàn cục để lưu trữ biểu đồ hiện tại
+
+        function plotGraph() {
+            const equation = document.getElementById("equation").value;
+            const ctx = document.getElementById('graphCanvas').getContext('2d');
+            
+            // Xóa biểu đồ cũ nếu tồn tại
+            if (myChart) {
+                myChart.destroy();
+            }
+            
+            let xValues = [];
+            let yValues = [];
+            
+            for (let x = -10; x <= 10; x += 0.1) {
+                // Kiểm tra điều kiện của x
+                if (x === 0) continue; // Bỏ qua giá trị x = 0 để tránh lỗi chia cho 0
+                
+                xValues.push(x);
+                try {
+                    // Đánh giá phương trình để tính giá trị y
+                    let y = eval(equation.replace(/x/g, x));
+                    // Kiểm tra y để tránh giá trị quá lớn hoặc không xác định
+                    if (Math.abs(y) > 1000) continue; // Bỏ qua y quá lớn
+                    
+                    yValues.push(y);
+                } catch (error) {
+                    alert("Lỗi khi đánh giá phương trình. Vui lòng nhập phương trình hợp lệ!");
+                    return;
+                }
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: 'Graph',
+                        data: yValues,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

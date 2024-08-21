@@ -5,69 +5,173 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plot Graph</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+            // customised options
+            // • auto-render specific keys, e.g.:
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            // • rendering keys, e.g.:
+            throwOnError : false
+            });
+        });
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            }
+
+            /* Create two equal columns that floats next to each other */
+            .column1 {
+            float: left;
+            width: 20%;
+            padding: 10px;
+            height: auto; /* Should be removed. Only for demonstration */
+            }
+
+            .column2 {
+            float: left;
+            width: 80%;
+            padding: 10px;
+            height: auto; /* Should be removed. Only for demonstration */
+            }
+
+            /* Clear floats after the columns */
+            .row:after {
+            content: "";
+            display: table;
+            clear: both;
+            }
+        body {
+            font-size: 14pt;
+        }
+        #graphCanvas {
+            width: 100px;
+            height: 100px;
+        }
+    </style>
 </head>
 <body>
     <h1>Vẽ đồ thị online</h1>
-    <input type="text" id="equation" placeholder="Enter equation, e.g., 1/x">
-    <button onclick="plotGraph()">Plot Graph</button>
-    <canvas id="graphCanvas" width="300" height="300"></canvas>
-
-    <script>
-        let myChart; // Biến toàn cục để lưu trữ biểu đồ hiện tại
-
-        function plotGraph() {
-            const equation = document.getElementById("equation").value;
-            const ctx = document.getElementById('graphCanvas').getContext('2d');
+    <div class="row">
+        <div class="column1">
+            <h4>Nhập hàm số có dạng $f(x)$ vào để vẽ!</h4>
+            <label for="equation">Nhập phương trình</label>
+            <input type="text" id="equation" placeholder="ví dụ, x*x">
+            <br>
+            <label for="xMin">$x_{\min}$:</label>
+            <input type="number" id="xMin" placeholder="-10">
+            <br>
+            <label for="xMax">$x_{\max}$:</label>
+            <input type="number" id="xMax" placeholder="10">
             
-            // Xóa biểu đồ cũ nếu tồn tại
-            if (myChart) {
-                myChart.destroy();
-            }
-            
-            let xValues = [];
-            let yValues = [];
-            
-            for (let x = -10; x <= 10; x += 0.1) {
-                // Kiểm tra điều kiện của x
-                if (x === 0) continue; // Bỏ qua giá trị x = 0 để tránh lỗi chia cho 0
-                
-                xValues.push(x);
-                try {
-                    // Đánh giá phương trình để tính giá trị y
-                    let y = eval(equation.replace(/x/g, x));
-                    // Kiểm tra y để tránh giá trị quá lớn hoặc không xác định
-                    if (Math.abs(y) > 1000) continue; // Bỏ qua y quá lớn
-                    
-                    yValues.push(y);
-                } catch (error) {
-                    alert("Lỗi khi đánh giá phương trình. Vui lòng nhập phương trình hợp lệ!");
-                    return;
-                }
-            }
-
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: xValues,
-                    datasets: [{
-                        label: 'Graph',
-                        data: yValues,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 2,
-                        fill: false
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: true,
-                    scales: {
-                        x: {
-                            type: 'linear',
-                            position: 'bottom'
-                        }
+            <!-- Thêm các ô nhập liệu cho khoảng giá trị y (tùy chọn) -->
+            <br>
+            <label for="yMin">$y_{\min}$:</label>
+            <input type="number" id="yMin" placeholder="-10">
+            <br>
+            <label for="yMax">$y_{\max}$:</label>
+            <input type="number" id="yMax" placeholder="10">
+            <br>
+            <button onclick="plotGraph()">Vẽ!</button>        
+        </div>
+        <div class="column2">
+            <canvas id="graphCanvas"></canvas>
+            <button onclick="saveChart()">Lưu đồ thị</button>
+        </div>
+    </div>
+        <script>
+            let myChart;
+            function plotGraph() {
+               const equation = document.getElementById("equation").value;
+               const ctx = document.getElementById('graphCanvas').getContext('2d');
+               
+               const xMin = parseFloat(document.getElementById("xMin").value) || -10;
+               const xMax = parseFloat(document.getElementById("xMax").value) || 10;
+               const yMin = parseFloat(document.getElementById("yMin").value);
+               const yMax = parseFloat(document.getElementById("yMax").value);
+               
+               if (myChart) {
+                   myChart.destroy();
+               }
+               
+               let xValues = [];
+               let yValues = [];
+               
+               for (let x = xMin; x <= xMax; x += 0.5) {
+                    xValues.push(x);
+                    try {
+                        const mathFunction = new Function('x', `
+                            with (Math) {
+                                return ${equation};
+                            }
+                        `);
+                        let y = mathFunction(x);
+                        if (Math.abs(y) > 1000) continue; // Bỏ qua giá trị y quá lớn
+                        yValues.push(y);
+                    }   catch (error) {
+                        alert("Phương trình lỗi. vui lòng nhập lại!");
+                        return;
                     }
                 }
-            });
-        }
-    </script>
+           
+               myChart = new Chart(ctx, {
+                   type: 'line',
+                   data: {
+                       labels: xValues,
+                       datasets: [{
+                           label: 'Graph',
+                           data: yValues,
+                           borderColor: 'rgba(75, 192, 192, 1)',
+                           borderWidth: 2,
+                           fill: false
+                       }]
+                   },
+                   options: {
+                       scales: {
+                           x: {
+                               type: 'linear',
+                               position: 'bottom',
+                               min: xMin,
+                               max: xMax,
+                               grid: {
+                                   borderColor: 'black',  // Màu sắc của trục Ox
+                                   borderWidth: 3,        // Độ dày của trục Ox
+                               },
+                               ticks: {
+                                   color: 'black', // Màu sắc của chữ số trên trục Ox
+                               }
+                           },
+                           y: {
+                               min: yMin || undefined, // Chỉ áp dụng nếu người dùng nhập giá trị
+                               max: yMax || undefined, // Chỉ áp dụng nếu người dùng nhập giá trị
+                               grid: {
+                                   borderColor: 'black',  // Màu sắc của trục Oy
+                                   borderWidth: 3,        // Độ dày của trục Oy
+                               },
+                               ticks: {
+                                   color: 'black', // Màu sắc của chữ số trên trục Oy
+                               }
+                           },
+                       }
+                   }
+               });
+           }    
+           function saveChart() {
+                const link = document.createElement('a');
+                link.href = document.getElementById('graphCanvas').toDataURL('image/png');
+                link.download = 'chart.png';
+                link.click();
+            }
+        </script>
 </body>
 </html>
